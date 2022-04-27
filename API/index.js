@@ -59,7 +59,8 @@ app.post('/api/states/:stateKey', (req, res) => {
 app.post('/api/speeds', (req, res) => {
     if (api_keys.includes(req.body.api_key)) {
         console.log(req.body);
-        res.send(req.body.speed);
+        res.status(200).send();
+        // res.send(req.body.speed);
     } else {
         res.status(403).send("You don't have access")
     }
