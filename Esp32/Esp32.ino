@@ -17,6 +17,7 @@ const int missionSelectorButton = 34;
 const int potPin = 36;
 
 // Properties to keep data
+int stationID = 0;
 int temp = 0;
 int mission = 0;
 
@@ -25,16 +26,16 @@ int currentPotValue; // do not change
 int newPotValue;     // do not change
 float voltage = 0;   // do not change
 
+// Server settings
 char serverAddress[] = "192.168.0.200"; // server address for the API at school
 int port = 8001;                        // Port number for the API
 
-// WiFiClient wifi;
-// HttpClient client = HTTPClient(wifi, serverAddress, port);
+WiFiClient wifi;
+HttpClient client = HTTPClient(wifi, serverAddress, port);
 int status = WL_IDLE_STATUS;
 
 void setup()
 {
-
     Serial.begin(115200);
 
     pinMode(missionSelectorButton, INPUT); // Setting the pin to INPUT mode
@@ -69,7 +70,32 @@ void loop()
 
     readPotMeterValue();
 
+    sendDataToApi();
+
     delay(50); // Delay for stability, as the potentiometer is not very stable in its readings
+}
+
+void sendDataToApi()
+{
+
+    // filling in the data to send
+    String path = "/api/speed";
+    Serial.println("making POST request");
+    String contentType = "application/json";
+
+    String postData = "{value:" + String(currentPotValue)+ "}";
+
+    // Sending the data to API
+    client.post(path, contentType, postData);
+
+    // read the status code and body of the response
+    int statusCode = client.responseStatusCode();
+    String response = client.responseBody();
+    // Print staus code and response
+    Serial.print("Status code: ");
+    Serial.println(statusCode);
+    Serial.print("Response: ");
+    Serial.println(response);
 }
 
 // Setting the starting value for the potentiometer
@@ -91,7 +117,7 @@ void printCurrentPotValue()
 void readPotMeterValue()
 {
     newPotValue = analogRead(potPin);
-    if (newPotValue <= currentPotValue - 150 || newPotValue >= currentPotValue + 150)
+    if (newPotValue <= currentPotValue - 50 || newPotValue >= currentPotValue + 50)
     {
         currentPotValue = newPotValue;
         voltage = (3.3 / 4095.0) * currentPotValue;
@@ -100,7 +126,7 @@ void readPotMeterValue()
     }
 }
 
-//Taking input from the mission selector button
+// Taking input from the mission selector button
 void missionSelector()
 {
     temp = digitalRead(missionSelectorButton);
