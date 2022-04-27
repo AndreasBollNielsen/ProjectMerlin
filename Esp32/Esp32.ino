@@ -1,16 +1,19 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include "wifi_secrets.h"
+#include <HTTPClient.h>
 
 // #define USE_SERIAL Serial
 
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-/////// WiFi Settings ///////
+///////please enter your sensitive data in the Secret tab/wifi_secrets.h
 
+/////// WiFi Settings ///////
 const char *ssid = SECRET_SSID;
 const char *password = SECRET_PASS;
+
+// server address for the API
+const char *serverAddress = "http://192.168.0.103:3000/api/speeds";
 
 // Difining the pins used for buttons
 const int missionSelectorButton = 34;
@@ -26,13 +29,9 @@ int currentPotValue; // do not change
 int newPotValue;     // do not change
 float voltage = 0;   // do not change
 
-// Server settings
-char serverAddress[] = "192.168.0.200"; // server address for the API at school
-int port = 8001;                        // Port number for the API
-
 WiFiClient wifi;
-HttpClient client = HTTPClient(wifi, serverAddress, port);
 int status = WL_IDLE_STATUS;
+int httpResponseCode;
 
 void setup()
 {
@@ -66,36 +65,42 @@ void setup()
 
 void loop()
 {
-    missionSelector();
+    doorOpenClose();
 
     readPotMeterValue();
 
     sendDataToApi();
 
-    delay(50); // Delay for stability, as the potentiometer is not very stable in its readings
+    delay(500); // Delay for stability, as the potentiometer is not very stable in its readings
 }
 
 void sendDataToApi()
 {
+    if (WiFi.status() == WL_CONNECTED && String(currentPotValue) != String(httpResponseCode))
+    {
 
-    // filling in the data to send
-    String path = "/api/speed";
-    Serial.println("making POST request");
-    String contentType = "application/json";
+        HTTPClient http;
+        http.begin(wifi, serverAddress);
 
-    String postData = "{value:" + String(currentPotValue)+ "}";
+        // filling in the data to send
+        Serial.println("making POST request to " + String(serverAddress));
 
-    // Sending the data to API
-    client.post(path, contentType, postData);
+        // APIkey: 7ea445c7-a737-4b9d-8b7d-5f8899a70515
+        http.addHeader("Content-Type", "application/json");
+        // Sending the data to API and getting responscode back
+        httpResponseCode = http.POST("{\"api_key\":\"7ea445c7-a737-4b9d-8b7d-5f8899a70515\",\"speed\":" + String(currentPotValue) + "}");
 
-    // read the status code and body of the response
-    int statusCode = client.responseStatusCode();
-    String response = client.responseBody();
-    // Print staus code and response
-    Serial.print("Status code: ");
-    Serial.println(statusCode);
-    Serial.print("Response: ");
-    Serial.println(response);
+        // Printing the responsecode to serial
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+
+        // Free resources
+        http.end();
+    }
+    else
+    {
+        Serial.println("WiFi Disconnected");
+    }
 }
 
 // Setting the starting value for the potentiometer
@@ -105,12 +110,13 @@ void setPotValueStart()
     currentPotValue = newPotValue;
 }
 
+// Print potValue to serial
 void printCurrentPotValue()
 {
-    Serial.print("PotValue: ");
-    Serial.print(newPotValue);
-    Serial.print("  -  Voltage: ");
-    Serial.println(voltage);
+    Serial.print("PotValue: ");     // DEBUG
+    Serial.print(newPotValue);      // DEBUG
+    Serial.print("  -  Voltage: "); // DEBUG
+    Serial.println(voltage);        // DEBUG
 }
 
 // read the input on analog pin potPin:
@@ -122,17 +128,52 @@ void readPotMeterValue()
         currentPotValue = newPotValue;
         voltage = (3.3 / 4095.0) * currentPotValue;
 
-        printCurrentPotValue();
+        printCurrentPotValue(); // DEBUG
     }
 }
 
 // Taking input from the mission selector button
-void missionSelector()
+void doorOpenClose()
 {
     temp = digitalRead(missionSelectorButton);
     if (temp == HIGH)
     {
         mission++;
-        Serial.println("Selector on");
+        Serial.println("Selector on"); // DEBUG
     }
+}
+
+// Light on and off the light
+void lightOnOff()
+{
+}
+
+// Toggling the horn when holding down the button
+void horn()
+{
+}
+
+// EMergency stop button. setting speed to 0
+void emergencyStop()
+{
+}
+
+// Misison selector up button
+void missionSelectorUp()
+{
+}
+
+// Misison selector down button
+void missionSelectorDown()
+{
+}
+
+// Mission confirm button
+void missionConfirm()
+{
+}
+
+// Mission abort button
+void missionAbort()
+{
 }
